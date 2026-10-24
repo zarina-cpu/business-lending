@@ -1,0 +1,52 @@
+import { addLead } from "@/lib/leads";
+import { notifyTelegram } from "@/lib/telegram";
+import { findMentionedTeas } from "@/lib/teas";
+
+export const runtime = "nodejs";
+
+function validPhone(phone) {
+  const digits = String(phone).replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
+}
+
+export async function POST(request) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Некорректные данные формы" }, { status: 400 });
+  }
+
+  const name = String(body.name || "").trim();
+  const phone = String(body.phone || "").trim();
+  const comment = String(body.comment || "").trim();
+  const source = body.source === "quiz" ? "quiz" : "form";
+
+  if (name.length < 2) {
+    return Response.json({ error: "Укажите имя" }, { status: 400 });
+  }
+  if (!validPhone(phone)) {
+    return Response.json({ error: "Укажите телефон с кодом страны" }, { status: 400 });
+  }
+
+  const mentioned = findMentionedTeas(comment);
+  const quiz = { ...(body.quiz || {}) };
+  if (mentioned.length) {
+    quiz.tea = mentioned.join(", ");
+  }
+
+  const lead = await addLead({
+    name,
+    phone,
+    comment,
+    source,
+    quiz: Object.keys(quiz).length ? quiz : null,
+  });
+
+  try {
+    await notifyTelegram(lead);
+  } catch (error) {
+    console.error("Telegram notify failed", error);
+  }
+  return Response.json({ ok: true, id: lead.id });
+}
