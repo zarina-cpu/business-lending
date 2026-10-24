@@ -142,8 +142,9 @@ export default function AiAssistant() {
                   body: JSON.stringify({
                     name: contact.name,
                     phone: contact.phone,
-                    comment: messages.map((item) => item.content).join(" | ").slice(0, 400),
+                    comment: "",
                     source: "quiz",
+                    messages,
                   }),
                 });
                 const data = await readResponseJson(response);

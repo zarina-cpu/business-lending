@@ -1,5 +1,6 @@
 import { addLead } from "@/lib/leads";
 import { notifyTelegram } from "@/lib/telegram";
+import { buildQuizComment } from "@/lib/parse-lead";
 import { findMentionedTeas } from "@/lib/teas";
 
 export const runtime = "nodejs";
@@ -30,16 +31,30 @@ export async function POST(request) {
   }
 
   try {
-    const mentioned = findMentionedTeas(comment);
+    const history = Array.isArray(body.messages) ? body.messages : [];
+    const mentioned = findMentionedTeas(
+      history
+        .filter((item) => item.role === "user")
+        .map((item) => item.content)
+        .join("\n") +
+        "\n" +
+        comment,
+      { includeFamilies: true }
+    );
     const quiz = { ...(body.quiz || {}) };
     if (mentioned.length) {
       quiz.tea = mentioned.join(", ");
     }
 
+    const savedComment =
+      source === "quiz"
+        ? buildQuizComment({ history, modelComment: comment, quiz })
+        : comment;
+
     const lead = await addLead({
       name,
       phone,
-      comment,
+      comment: savedComment,
       source,
       quiz: Object.keys(quiz).length ? quiz : null,
     });
