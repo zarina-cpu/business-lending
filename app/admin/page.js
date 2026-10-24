@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { readResponseJson } from "@/lib/http";
 
 function formatDate(value) {
   try {
@@ -28,7 +29,7 @@ export default function AdminPage() {
       setLeads([]);
       return;
     }
-    const data = await response.json();
+    const data = await readResponseJson(response);
     if (!response.ok) {
       setError(data.error || "Не удалось загрузить заявки");
       return;
@@ -49,7 +50,7 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
-    const data = await response.json();
+    const data = await readResponseJson(response);
     if (!response.ok) {
       setError(data.error || "Ошибка входа");
       return;

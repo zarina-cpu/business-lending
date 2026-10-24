@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { readResponseJson } from "@/lib/http";
 
 const starters = [
   "Белый чай",
@@ -40,7 +41,7 @@ export default function AiAssistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await response.json();
+      const data = await readResponseJson(response);
       if (!response.ok) {
         throw new Error(data.error || "Нет ответа");
       }
@@ -73,7 +74,7 @@ export default function AiAssistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [] }),
       });
-      const data = await response.json();
+      const data = await readResponseJson(response);
       if (!response.ok) throw new Error(data.error);
       setMessages([{ role: "assistant", content: data.reply }]);
     } catch (error) {
@@ -145,7 +146,7 @@ export default function AiAssistant() {
                     source: "quiz",
                   }),
                 });
-                const data = await response.json();
+                const data = await readResponseJson(response);
                 if (!response.ok) throw new Error(data.error || "Не удалось записать");
                 setNotice("Заявку записали. Сомелье перезвонит, и она уже в /admin и в Telegram.");
                 setContact({ name: "", phone: "" });

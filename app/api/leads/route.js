@@ -29,24 +29,33 @@ export async function POST(request) {
     return Response.json({ error: "Укажите телефон с кодом страны" }, { status: 400 });
   }
 
-  const mentioned = findMentionedTeas(comment);
-  const quiz = { ...(body.quiz || {}) };
-  if (mentioned.length) {
-    quiz.tea = mentioned.join(", ");
-  }
-
-  const lead = await addLead({
-    name,
-    phone,
-    comment,
-    source,
-    quiz: Object.keys(quiz).length ? quiz : null,
-  });
-
   try {
-    await notifyTelegram(lead);
+    const mentioned = findMentionedTeas(comment);
+    const quiz = { ...(body.quiz || {}) };
+    if (mentioned.length) {
+      quiz.tea = mentioned.join(", ");
+    }
+
+    const lead = await addLead({
+      name,
+      phone,
+      comment,
+      source,
+      quiz: Object.keys(quiz).length ? quiz : null,
+    });
+
+    try {
+      await notifyTelegram(lead);
+    } catch (error) {
+      console.error("Telegram notify failed", error);
+    }
+    return Response.json({ ok: true, id: lead.id });
   } catch (error) {
-    console.error("Telegram notify failed", error);
+    console.error(error);
+    const message =
+      error?.message === "NO_TURSO"
+        ? "База заявок не настроена. Добавьте TURSO_DATABASE_URL и TURSO_AUTH_TOKEN."
+        : "Не удалось сохранить заявку. Попробуйте ещё раз.";
+    return Response.json({ error: message }, { status: 500 });
   }
-  return Response.json({ ok: true, id: lead.id });
 }

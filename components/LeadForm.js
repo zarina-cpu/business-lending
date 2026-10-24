@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Reveal from "./Reveal";
+import { readResponseJson } from "@/lib/http";
 
 export default function LeadForm() {
   const [status, setStatus] = useState("idle");
@@ -26,7 +27,7 @@ export default function LeadForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
+      const data = await readResponseJson(response);
       if (!response.ok) {
         throw new Error(data.error || "Не удалось отправить");
       }
