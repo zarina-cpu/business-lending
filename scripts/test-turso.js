@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const { createClient } = require("@libsql/client");
 
 function readEnv(file) {
   const map = {};
@@ -13,27 +12,28 @@ function readEnv(file) {
   return map;
 }
 
-const env = { ...readEnv(".env"), ...readEnv(".env.local") };
-const client = createClient({
-  url: env.TURSO_DATABASE_URL,
-  authToken: env.TURSO_AUTH_TOKEN,
-});
+const env = readEnv(".env.local");
+const endpoint = `${env.TURSO_DATABASE_URL.replace(/^libsql:\/\//, "https://")}/v2/pipeline`;
 
 (async () => {
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS leads (
-      id TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL,
-      name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      comment TEXT,
-      source TEXT,
-      quiz TEXT
-    )
-  `);
-  const count = await client.execute("SELECT COUNT(*) AS total FROM leads");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.TURSO_AUTH_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requests: [
+        { type: "execute", stmt: { sql: "SELECT COUNT(*) AS total FROM leads" } },
+        { type: "close" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.results?.[0]?.type === "error") {
+    throw new Error(data.results?.[0]?.error?.message || "turso_fail");
+  }
   console.log("turso_ok");
-  console.log("leads_count", Number(count.rows[0].total));
 })().catch((error) => {
   console.error("turso_fail", error.message);
   process.exit(1);

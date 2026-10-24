@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const { createClient } = require("@libsql/client");
 
 function readEnv(file) {
   const map = {};
@@ -13,21 +12,54 @@ function readEnv(file) {
   return map;
 }
 
-const env = { ...readEnv(".env"), ...readEnv(".env.local") };
-const client = createClient({
-  url: env.TURSO_DATABASE_URL,
-  authToken: env.TURSO_AUTH_TOKEN,
-});
+function toArg(value) {
+  if (value === null || value === undefined) return { type: "null" };
+  return { type: "text", value: String(value) };
+}
+
+const env = readEnv(".env.local");
+const endpoint = `${env.TURSO_DATABASE_URL.replace(/^libsql:\/\//, "https://")}/v2/pipeline`;
+
+async function run(sql, args = []) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.TURSO_AUTH_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requests: [
+        { type: "execute", stmt: { sql, args: args.map(toArg) } },
+        { type: "close" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.results?.[0]?.type === "error") {
+    throw new Error(data.results?.[0]?.error?.message || "import_fail");
+  }
+  return data;
+}
 
 (async () => {
-  const file = path.join(process.cwd(), "data", "leads.json");
-  const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+  const parsed = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "data", "leads.json"), "utf8")
+  );
+  await run(`CREATE TABLE IF NOT EXISTS leads (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    comment TEXT,
+    source TEXT,
+    quiz TEXT
+  )`);
   let imported = 0;
   for (const lead of parsed) {
-    const result = await client.execute({
-      sql: `INSERT OR IGNORE INTO leads (id, created_at, name, phone, comment, source, quiz)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [
+    await run(
+      `INSERT OR IGNORE INTO leads (id, created_at, name, phone, comment, source, quiz)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
         lead.id,
         lead.createdAt,
         lead.name,
@@ -35,13 +67,11 @@ const client = createClient({
         lead.comment || "",
         lead.source || "form",
         lead.quiz ? JSON.stringify(lead.quiz) : null,
-      ],
-    });
-    imported += Number(result.rowsAffected || 0);
+      ]
+    );
+    imported += 1;
   }
-  const count = await client.execute("SELECT COUNT(*) AS total FROM leads");
   console.log("imported", imported);
-  console.log("leads_count", Number(count.rows[0].total));
 })().catch((error) => {
   console.error("import_fail", error.message);
   process.exit(1);
