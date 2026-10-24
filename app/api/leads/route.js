@@ -1,7 +1,7 @@
 import { addLead } from "@/lib/leads";
 import { notifyTelegram } from "@/lib/telegram";
 import { buildQuizComment } from "@/lib/parse-lead";
-import { findMentionedTeas } from "@/lib/teas";
+import { resolveTeaChoice } from "@/lib/teas";
 
 export const runtime = "nodejs";
 
@@ -32,18 +32,13 @@ export async function POST(request) {
 
   try {
     const history = Array.isArray(body.messages) ? body.messages : [];
-    const mentioned = findMentionedTeas(
-      history
-        .filter((item) => item.role === "user")
-        .map((item) => item.content)
-        .join("\n") +
-        "\n" +
-        comment,
-      { includeFamilies: true }
-    );
+    const userText = history
+      .filter((item) => item.role === "user")
+      .map((item) => item.content)
+      .join("\n");
     const quiz = { ...(body.quiz || {}) };
-    if (mentioned.length) {
-      quiz.tea = mentioned.join(", ");
+    if (source === "quiz") {
+      quiz.tea = resolveTeaChoice(userText, quiz.tea) || "не указан";
     }
 
     const savedComment =
