@@ -1,8 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Hide the English Next.js DevTools overlay on the landing page.
   devIndicators: false,
-  serverExternalPackages: ["@libsql/client", "@libsql/hrana-client"],
+  serverExternalPackages: [
+    "@libsql/client",
+    "@libsql/hrana-client",
+    "@libsql/core",
+    "libsql",
+  ],
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /[\\/]LICENSE$/,
+      type: "asset/source",
+    });
+    return config;
+  },
 };
 
 export default nextConfig;
