@@ -14,6 +14,8 @@
   --surface: #efe8db;
   --line: #c9bba8;
   --glow: rgba(181, 106, 58, 0.28);
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "Nunito Sans", sans-serif;
 }
 
 html.dark {

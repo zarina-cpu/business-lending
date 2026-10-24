@@ -1,19 +1,6 @@
-import { Cormorant_Garamond, Nunito_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SmoothScroll from "@/components/SmoothScroll";
 import "./globals.css";
-
-const display = Cormorant_Garamond({
-  subsets: ["cyrillic", "latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
-});
-
-const body = Nunito_Sans({
-  subsets: ["cyrillic", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
-});
 
 export const metadata = {
   title: "Hokkori Tea — чайная и магазин",
@@ -25,13 +12,23 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
       </head>
-      <body className={`${display.variable} ${body.variable} antialiased`}>
+      <body className="antialiased">
         <ThemeProvider>
           <SmoothScroll>{children}</SmoothScroll>
         </ThemeProvider>
